@@ -44,6 +44,7 @@ from config import (
     DOWNLOAD_TIMEOUT_MS,
     NAV_TIMEOUT_MS,
     PORTAL_BASE,
+    REQUEST_TIMEOUT_MS,
     RESTART_URL,
     TEMP_DIR,
 )
@@ -200,7 +201,7 @@ class DocumentDownloader:
 
     def _fetch_direct(self, url: str, dest: Path) -> Path | None:
         """GET a pre-authorized document URL; save if it is a real file."""
-        body = self._context.request.get(url).body()
+        body = self._context.request.get(url, timeout=REQUEST_TIMEOUT_MS).body()
         if body[:4] == b"%PDF" or body[:2] == b"PK":
             dest.write_bytes(body)
             return dest
@@ -213,7 +214,7 @@ class DocumentDownloader:
         starts with ``PK``. Otherwise solve the DocDownCaptcha and capture the
         resulting download.
         """
-        body = self._context.request.get(url).body()
+        body = self._context.request.get(url, timeout=REQUEST_TIMEOUT_MS).body()
         if body[:2] == b"PK":
             dest.write_bytes(body)
             return dest

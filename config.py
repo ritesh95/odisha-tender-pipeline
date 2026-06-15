@@ -28,6 +28,7 @@ DOWNLOAD_RETRIES = 3              # retries for navigation/session failures
 CAPTCHA_ATTEMPTS = 6             # captcha solve attempts per tender
 NAV_TIMEOUT_MS = 60_000          # page navigation timeout
 DOWNLOAD_TIMEOUT_MS = 120_000    # wait for a download to start/finish
+REQUEST_TIMEOUT_MS = 90_000      # direct document GETs (portal can be slow)
 
 # NIC GePNIC portal endpoints.
 PORTAL_HOME = "https://tendersodisha.gov.in/nicgep/app"

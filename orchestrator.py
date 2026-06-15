@@ -213,6 +213,12 @@ def main() -> None:
         total_failed,
     )
 
+    # Surface a systemic problem (e.g. the portal blocking the runner's IP) as a
+    # failed job, while tolerating the odd transient per-tender failure.
+    if total_seen > 0 and total_ok == 0:
+        log.error("All %d tenders failed — likely a systemic issue", total_seen)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
