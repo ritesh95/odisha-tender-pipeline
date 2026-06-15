@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -156,6 +157,12 @@ def main() -> None:
         "--limit", type=int, default=10, help="Max tenders to process (default 10)"
     )
     parser.add_argument(
+        "--max-minutes",
+        type=float,
+        default=0,
+        help="Stop starting new batches after this many minutes (0 = no limit)",
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=BATCH_SIZE,
@@ -183,11 +190,21 @@ def main() -> None:
 
     # Batch mode.
     total_ok = total_failed = total_seen = 0
+    deadline = time.monotonic() + args.max_minutes * 60 if args.max_minutes else None
+
+    def out_of_time() -> bool:
+        if deadline and time.monotonic() >= deadline:
+            log.info("Time budget reached; stopping after this run")
+            return True
+        return False
+
     if args.reprocess:
         # Fixed list of already-done tenders (re-querying would loop forever,
         # since each stays "processed"). Chunk it so the session refreshes.
         todo = get_processed_tenders(args.limit)
         for start in range(0, len(todo), args.batch_size):
+            if out_of_time():
+                break
             batch = todo[start : start + args.batch_size]
             total_seen += len(batch)
             ok, failed = run(batch, args.headful)
@@ -196,6 +213,8 @@ def main() -> None:
             log.info("Batch summary: ok=%d failed=%d", ok, failed)
     else:
         while total_seen < args.limit:
+            if out_of_time():
+                break
             remaining = args.limit - total_seen
             batch = get_unprocessed_tenders(min(args.batch_size, remaining))
             if not batch:

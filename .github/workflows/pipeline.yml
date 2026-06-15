@@ -6,12 +6,15 @@ name: tender-document-pipeline
 # on the next run.
 on:
   schedule:
-    - cron: "0 */4 * * *"   # every 4 hours (UTC); GitHub may delay under load
+    - cron: "0 */2 * * *"   # every 2 hours (UTC); GitHub may delay under load
   workflow_dispatch:        # allow manual runs from the Actions tab
     inputs:
       limit:
         description: "Max tenders to process this run"
-        default: "40"
+        default: "1000"
+      max_minutes:
+        description: "Stop starting new batches after N minutes"
+        default: "90"
       reprocess:
         description: "Re-process already-done tenders instead of new ones"
         type: boolean
@@ -48,13 +51,14 @@ jobs:
           PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
           PROXY_USERNAME: ${{ secrets.PROXY_USERNAME }}
           PROXY_PASSWORD: ${{ secrets.PROXY_PASSWORD }}
-          LIMIT: ${{ github.event.inputs.limit || '40' }}
+          LIMIT: ${{ github.event.inputs.limit || '1000' }}
+          MAX_MINUTES: ${{ github.event.inputs.max_minutes || '90' }}
           REPROCESS: ${{ github.event.inputs.reprocess || 'false' }}
         run: |
           if [ "$REPROCESS" = "true" ]; then
-            python orchestrator.py --limit "$LIMIT" --reprocess
+            python orchestrator.py --limit "$LIMIT" --max-minutes "$MAX_MINUTES" --reprocess
           else
-            python orchestrator.py --limit "$LIMIT"
+            python orchestrator.py --limit "$LIMIT" --max-minutes "$MAX_MINUTES"
           fi
 
       - name: Upload run log
