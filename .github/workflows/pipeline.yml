@@ -1,0 +1,63 @@
+name: tender-document-pipeline
+
+# Runs the pipeline on a schedule. Each run processes any tenders that are not
+# yet done (storage_path IS NULL) — so it clears the backlog and picks up any
+# newly-scraped tenders automatically. Failed tenders stay null and are retried
+# on the next run.
+on:
+  schedule:
+    - cron: "0 */4 * * *"   # every 4 hours (UTC); GitHub may delay under load
+  workflow_dispatch:        # allow manual runs from the Actions tab
+    inputs:
+      limit:
+        description: "Max tenders to process this run"
+        default: "40"
+      reprocess:
+        description: "Re-process already-done tenders instead of new ones"
+        type: boolean
+        default: false
+
+# Never let two runs overlap (avoids double work / wasted captcha solves).
+concurrency:
+  group: tender-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330      # under GitHub's 6h job cap
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TWOCAPTCHA_API_KEY: ${{ secrets.TWOCAPTCHA_API_KEY }}
+          LIMIT: ${{ github.event.inputs.limit || '40' }}
+          REPROCESS: ${{ github.event.inputs.reprocess || 'false' }}
+        run: |
+          if [ "$REPROCESS" = "true" ]; then
+            python orchestrator.py --limit "$LIMIT" --reprocess
+          else
+            python orchestrator.py --limit "$LIMIT"
+          fi
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-log-${{ github.run_id }}
+          path: pipeline.log
+          if-no-files-found: ignore
+          retention-days: 14

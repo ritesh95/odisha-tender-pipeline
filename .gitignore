@@ -1,0 +1,8 @@
+.env
+temp/
+pipeline.log
+__pycache__/
+*.pyc
+.venv/
+venv/
+.claude/
