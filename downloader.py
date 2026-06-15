@@ -47,6 +47,7 @@ from config import (
     REQUEST_TIMEOUT_MS,
     RESTART_URL,
     TEMP_DIR,
+    proxy_config,
 )
 
 
@@ -78,11 +79,19 @@ class DocumentDownloader:
         self._browser = None
         self._context = None
 
+    def _new_context(self):
+        proxy = proxy_config()
+        kwargs = {"accept_downloads": True}
+        if proxy:
+            kwargs["proxy"] = proxy
+        ctx = self._browser.new_context(**kwargs)
+        ctx.set_default_navigation_timeout(NAV_TIMEOUT_MS)
+        return ctx
+
     def __enter__(self) -> "DocumentDownloader":
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.launch(headless=not self._headful)
-        self._context = self._browser.new_context(accept_downloads=True)
-        self._context.set_default_navigation_timeout(NAV_TIMEOUT_MS)
+        self._context = self._new_context()
         self._restart_session()
         return self
 
@@ -113,8 +122,7 @@ class DocumentDownloader:
             except Exception:
                 pass
         self._browser = self._pw.chromium.launch(headless=not self._headful)
-        self._context = self._browser.new_context(accept_downloads=True)
-        self._context.set_default_navigation_timeout(NAV_TIMEOUT_MS)
+        self._context = self._new_context()
         self._restart_session()
 
     # -- public API --------------------------------------------------------

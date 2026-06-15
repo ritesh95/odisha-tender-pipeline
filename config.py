@@ -16,6 +16,26 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
 # 2Captcha API key for solving the document-download captcha.
 TWOCAPTCHA_API_KEY = os.environ.get("TWOCAPTCHA_API_KEY", "").strip()
 
+# Optional proxy for portal traffic. The portal blocks datacenter IPs (e.g.
+# GitHub-hosted runners) but allows residential/mobile IPs, so when running from
+# a datacenter set these to a residential proxy/VPN endpoint.
+#   PROXY_SERVER e.g. "http://host:port" or "socks5://host:port"
+PROXY_SERVER = os.environ.get("PROXY_SERVER", "").strip()
+PROXY_USERNAME = os.environ.get("PROXY_USERNAME", "").strip()
+PROXY_PASSWORD = os.environ.get("PROXY_PASSWORD", "").strip()
+
+
+def proxy_config() -> dict | None:
+    """Playwright proxy dict from env, or None if no proxy is configured."""
+    if not PROXY_SERVER:
+        return None
+    cfg: dict[str, str] = {"server": PROXY_SERVER}
+    if PROXY_USERNAME:
+        cfg["username"] = PROXY_USERNAME
+    if PROXY_PASSWORD:
+        cfg["password"] = PROXY_PASSWORD
+    return cfg
+
 # Storage bucket for downloaded tender documents.
 BUCKET = "tender-documents"
 
