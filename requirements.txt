@@ -1,7 +1,7 @@
 supabase>=2.4.0
 playwright>=1.40.0
-pandas>=2.0.0
-xlrd==2.0.1
+pandas>=2.0.0,<3.1  # 3.1 changed optional-dependency minimums (xlrd); bump deliberately
+xlrd==2.0.2
 openpyxl>=3.1.0
 pdfplumber>=0.10.0
 python-dotenv>=1.0.0

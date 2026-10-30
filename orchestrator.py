@@ -212,13 +212,15 @@ def main() -> None:
             total_failed += failed
             log.info("Batch summary: ok=%d failed=%d", ok, failed)
     else:
+        attempted: set[str] = set()
         while total_seen < args.limit:
             if out_of_time():
                 break
             remaining = args.limit - total_seen
-            batch = get_unprocessed_tenders(min(args.batch_size, remaining))
+            batch = get_unprocessed_tenders(min(args.batch_size, remaining), attempted)
             if not batch:
                 break
+            attempted.update(t["tender_id"] for t in batch)
             total_seen += len(batch)
             ok, failed = run(batch, args.headful)
             total_ok += ok

@@ -8,8 +8,15 @@ from typing import Any
 from config import BUCKET, get_client
 
 
-def get_unprocessed_tenders(limit: int) -> list[dict[str, Any]]:
-    """Tenders with documents that have not been processed yet."""
+def get_unprocessed_tenders(
+    limit: int, exclude: set[str] | frozenset[str] = frozenset()
+) -> list[dict[str, Any]]:
+    """Tenders with documents that have not been processed yet.
+
+    ``exclude`` holds ids already attempted this run. Failed tenders keep
+    storage_path NULL, so without it the next batch would return the same
+    failures again and the run would spin on them until its time budget.
+    """
     client = get_client()
     resp = (
         client.table("tenders")
@@ -17,11 +24,16 @@ def get_unprocessed_tenders(limit: int) -> list[dict[str, Any]]:
         .is_("storage_path", "null")
         .not_.is_("boq_documents", "null")
         .order("published_date", desc=True)
-        .limit(limit)
+        .limit(limit + len(exclude))
         .execute()
     )
     # jsonb_array_length can't be expressed via the query builder; filter here.
-    return [t for t in (resp.data or []) if t.get("boq_documents")]
+    rows = [
+        t
+        for t in (resp.data or [])
+        if t.get("boq_documents") and t["tender_id"] not in exclude
+    ]
+    return rows[:limit]
 
 
 def get_processed_tenders(limit: int) -> list[dict[str, Any]]:
